@@ -1,0 +1,28 @@
+linters-settings:
+  gofmt:
+    simplify: true
+  gocyclo:
+    min-complexity: 15
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - goconst
+    - gocyclo
+    - gofmt
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - typecheck
+    - unused
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
