@@ -1,19 +1,11 @@
 
-FROM golang:1.21-alpine
+FROM golang:1.24-alpine
 
 WORKDIR /app
-
-COPY go.mod go.sum ./
-RUN go mod download
-
 COPY . .
+RUN go mod download
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bot ./cmd/bot
+RUN chmod +x /app/bot
 
-# Собираем и делаем исполняемым
-RUN CGO_ENABLED=0 GOOS=linux go build -o /go/bin/bot ./cmd/bot
-RUN chmod +x /go/bin/bot
-
-WORKDIR /go/bin
-
-EXPOSE 8080
-
+WORKDIR /app
 CMD ["./bot"]
