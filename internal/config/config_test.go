@@ -5,50 +5,50 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadConfig(t *testing.T) {
-	// Сохраняем оригинальные значения
-	originalBotToken := os.Getenv("BOT_TOKEN")
-	originalDBURL := os.Getenv("DB_URL")
-
-	// Устанавливаем тестовые значения
-	os.Setenv("BOT_TOKEN", "test_token")
-	os.Setenv("DB_URL", "postgres://test:test@localhost/test")
-
-	// Сбрасываем Viper чтобы он перечитал environment variables
+	// Очищаем Viper
 	viper.Reset()
+	defer viper.Reset()
 
-	config, err := Load()
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
+	// Устанавливаем все нужные переменные
+	os.Setenv("BOT_TOKEN", "123:test_token")
+	os.Setenv("POSTGRES_HOST", "localhost")
+	os.Setenv("POSTGRES_PORT", "5432")
+	os.Setenv("POSTGRES_USER", "testuser")
+	os.Setenv("POSTGRES_PASSWORD", "testpass")
+	os.Setenv("POSTGRES_DB", "testdb")
+	os.Setenv("POSTGRES_SSLMODE", "disable")
+	os.Setenv("LOG_LEVEL", "debug")
+	os.Setenv("CACHE_TTL_MINUTES", "10")
 
-	if config.BotToken != "test_token" {
-		t.Errorf("Expected BOT_TOKEN 'test_token', got '%s'", config.BotToken)
-	}
-
-	if config.DBURL != "postgres://test:test@localhost/test" {
-		t.Errorf("Expected DB_URL 'postgres://test:test@localhost/test', got '%s'", config.DBURL)
-	}
-
-	// Восстанавливаем оригинальные значения
-	if originalBotToken != "" {
-		os.Setenv("BOT_TOKEN", originalBotToken)
-	} else {
+	// Сбрасываем старые значения (на всякий случай)
+	defer func() {
 		os.Unsetenv("BOT_TOKEN")
-	}
-	if originalDBURL != "" {
-		os.Setenv("DB_URL", originalDBURL)
-	} else {
-		os.Unsetenv("DB_URL")
-	}
+		os.Unsetenv("POSTGRES_HOST")
+		os.Unsetenv("POSTGRES_PORT")
+		os.Unsetenv("POSTGRES_USER")
+		os.Unsetenv("POSTGRES_PASSWORD")
+		os.Unsetenv("POSTGRES_DB")
+		os.Unsetenv("POSTGRES_SSLMODE")
+		os.Unsetenv("LOG_LEVEL")
+		os.Unsetenv("CACHE_TTL_MINUTES")
+	}()
+
+	cfg, err := Load()
+
+	assert.NoError(t, err)
+	assert.Equal(t, "123:test_token", cfg.BotToken)
+	assert.Equal(t, "postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable", cfg.DBURL)
+	assert.Equal(t, "debug", cfg.LogLevel)
+	assert.Equal(t, 10, cfg.CacheTTLMinutes)
 }
 
-func TestLoadConfigMissingRequired(t *testing.T) {
-	// Сохраняем оригинальные значения
-	originalBotToken := os.Getenv("BOT_TOKEN")
-	originalDBURL := os.Getenv("DB_URL")
+func TestLoadConfig_MissingBotToken(t *testing.T) {
+	viper.Reset()
+	defer viper.Reset()
 
 	// Убираем обязательные переменные
 	os.Unsetenv("BOT_TOKEN")
@@ -62,13 +62,6 @@ func TestLoadConfigMissingRequired(t *testing.T) {
 		t.Error("Expected error for missing required environment variables")
 	}
 
-	// Восстанавливаем оригинальные значения
-	if originalBotToken != "" {
-		os.Setenv("BOT_TOKEN", originalBotToken)
-	}
-	if originalDBURL != "" {
-		os.Setenv("DB_URL", originalDBURL)
-	}
 }
 
 func TestLoadConfigDefaults(t *testing.T) {
