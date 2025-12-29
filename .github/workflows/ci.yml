@@ -60,9 +60,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          # Аргумент --mod=vendor заставляет линтер брать пакеты из твоей папки vendor,
-          # которую ты создал командой go mod vendor. Это уберет ошибки "undefined".
-          args: --mod=vendor --timeout=5m
+          args: --timeout=5m
 
   commitlint:
     name: Lint Commit Messages
