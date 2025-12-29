@@ -20,9 +20,9 @@ type ExchangeRate struct {
 
 // UserFavorite представляет избранную пару валют пользователя
 type UserFavorite struct {
-	ID           int64
-	UserID       int64
-	FromCurrency string
-	ToCurrency   string
-	CreatedAt    time.Time
+	ID           int64     `db:"id"`
+	UserID       int64     `db:"user_id"`
+	FromCurrency string    `db:"from_currency"`
+	ToCurrency   string    `db:"to_currency"`
+	CreatedAt    time.Time `db:"created_at"`
 }

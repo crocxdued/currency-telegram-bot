@@ -22,13 +22,13 @@ func NewExchangeService(providers []ExchangeProvider, cache *cache.RatesCache) *
 
 // GetRate получает курс обмена с использованием кэша и fallback провайдеров
 func (s *ExchangeServiceImpl) GetRate(ctx context.Context, from, to string) (float64, error) {
-	// Нормализуем коды валют
-	from = strings.ToUpper(from)
-	to = strings.ToUpper(to)
+	// 1. Максимально жесткая очистка входящих строк
+	from = strings.ToUpper(strings.TrimSpace(from))
+	to = strings.ToUpper(strings.TrimSpace(to))
 
-	// Проверяем кэш
-	if rate, found := s.cache.Get(from, to); found {
-		return rate, nil
+	// 2. Проверка на пустые строки (чтобы не ходить в кэш с мусором)
+	if from == "" || to == "" {
+		return 0, fmt.Errorf("invalid currency codes: from='%s', to='%s'", from, to)
 	}
 
 	// Пробуем получить курс от доступных провайдеров

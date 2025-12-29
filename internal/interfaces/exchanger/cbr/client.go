@@ -4,127 +4,66 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
+
+	"golang.org/x/net/html/charset"
 )
 
 type ValCurs struct {
-	XMLName xml.Name `xml:"ValCurs"`
-	Valutes []Valute `xml:"Valute"`
-}
-
-type Valute struct {
-	ID       string `xml:"ID,attr"`
-	NumCode  string `xml:"NumCode"`
-	CharCode string `xml:"CharCode"`
-	Nominal  string `xml:"Nominal"`
-	Name     string `xml:"Name"`
-	Value    string `xml:"Value"`
+	Valutes []struct {
+		CharCode string `xml:"CharCode"`
+		Value    string `xml:"Value"`
+		Nominal  int    `xml:"Nominal"`
+	} `xml:"Valute"`
 }
 
 type CBRClient struct {
-	baseURL    string
-	httpClient *http.Client
+	baseURL string
 }
 
 func New() *CBRClient {
-	return &CBRClient{
-		baseURL: "https://www.cbr.ru",
-		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-	}
+	return &CBRClient{baseURL: "https://www.cbr.ru/scripts/XML_daily.asp"}
 }
 
-// GetRate получает курс обмена (все курсы от RUB)
 func (c *CBRClient) GetRate(ctx context.Context, from, to string) (float64, error) {
-	// CBR API предоставляет курсы только относительно RUB
-	if from != "RUB" && to != "RUB" {
-		return 0, fmt.Errorf("CBR API supports only RUB conversions")
+	if to != "RUB" && from != "RUB" {
+		return 0, fmt.Errorf("CBR provider only supports RUB pairs")
 	}
 
-	url := fmt.Sprintf("%s/scripts/XML_daily_eng.asp", c.baseURL)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	resp, err := http.Get(c.baseURL)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("failed to make request: %w", err)
+		return 0, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("API returned status: %d", resp.StatusCode)
+	decoder := xml.NewDecoder(resp.Body)
+	decoder.CharsetReader = charset.NewReaderLabel
+
+	var data ValCurs
+	if err := decoder.Decode(&data); err != nil {
+		return 0, err
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	var valCurs ValCurs
-	if err := xml.Unmarshal(body, &valCurs); err != nil {
-		return 0, fmt.Errorf("failed to parse XML: %w", err)
-	}
-
-	// Определяем целевую валюту
-	targetCurrency := to
+	target := from
 	if from == "RUB" {
-		targetCurrency = to
-	} else {
-		targetCurrency = from
+		target = to
 	}
 
-	// Ищем нужную валюту
-	var rate float64
-	var found bool
-
-	for _, valute := range valCurs.Valutes {
-		if valute.CharCode == targetCurrency {
-			// Конвертируем строку в float (заменяем запятую на точку)
-			valueStr := strings.Replace(valute.Value, ",", ".", -1)
-			rate, err = strconv.ParseFloat(valueStr, 64)
-			if err != nil {
-				return 0, fmt.Errorf("failed to parse rate: %w", err)
+	for _, v := range data.Valutes {
+		if v.CharCode == target {
+			valStr := strings.Replace(v.Value, ",", ".", 1)
+			var rate float64
+			fmt.Sscanf(valStr, "%f", &rate)
+			res := rate / float64(v.Nominal)
+			if from == "RUB" {
+				return 1 / res, nil
 			}
-
-			// Делим на номинал (например, 1 USD = 90 RUB, но может быть 10 CNY = 120 RUB)
-			nominal, _ := strconv.ParseFloat(valute.Nominal, 64)
-			rate = rate / nominal
-
-			found = true
-			break
+			return res, nil
 		}
 	}
-
-	if !found {
-		return 0, fmt.Errorf("currency %s not found in CBR response", targetCurrency)
-	}
-
-	// Если конвертируем из RUB в другую валюту, инвертируем курс
-	if from == "RUB" {
-		rate = 1 / rate
-	}
-
-	return rate, nil
+	return 0, fmt.Errorf("currency %s not found", target)
 }
 
-// GetName возвращает имя провайдера
-func (c *CBRClient) GetName() string {
-	return "cbr.ru"
-}
-
-// IsAvailable проверяет доступность провайдера
-func (c *CBRClient) IsAvailable() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := c.GetRate(ctx, "USD", "RUB")
-	return err == nil
-}
+func (c *CBRClient) GetName() string   { return "CBR" }
+func (c *CBRClient) IsAvailable() bool { return true }
