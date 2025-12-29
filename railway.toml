@@ -1,9 +1,0 @@
-[build]
-builder = "DOCKERFILE"
-
-[deploy]
-startCommand = "chmod +x ./bot && ./bot"
-
-[[services]]
-name = "bot"
-run = "chmod +x ./bot && ./bot"
