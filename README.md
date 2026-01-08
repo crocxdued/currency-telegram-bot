@@ -1,21 +1,40 @@
-# currency-telegram-bot
+# Currency Telegram Bot
 
-## 🚀 Deployment on Railway
+Бот для мониторинга курсов валют и быстрой конвертации сумм с поддержкой списка избранного в Telegram.
 
-### Automatic Deployment (Recommended)
-1. Fork this repository
-2. Go to [Railway](https://railway.app) and create account
-3. Click "New Project" → "Deploy from GitHub repo"
-4. Connect your forked repository
-5. Add environment variables:
-   - `BOT_TOKEN` - your Telegram bot token
-   - `DB_URL` - PostgreSQL connection string (Railway provides this automatically)
-   - `LOG_LEVEL` - `info` (recommended for production)
-   - `CACHE_TTL_MINUTES` - `5`
+## Инструкция по сборке (Build)
 
-### Manual Deployment
-1. Install Railway CLI: `npm i -g @railway/cli`
-2. Login: `railway login`
-3. Link project: `railway link`
-4. Set environment variables: `railway variables set BOT_TOKEN=your_token`
-5. Deploy: `railway up`
+Для сборки проекта необходимо наличие установленного Go версии 1.21 или выше:
+
+go build -o currency-bot cmd/main.go
+
+## Инструкция по запуску (Run)
+
+1. Настройте переменные окружения для токена Telegram Bot API и параметров базы данных.
+2. Запустите исполняемый файл:
+
+./currency-bot
+
+Или запустите проект напрямую через Go:
+
+go run cmd/main.go
+
+## Тестирование (Tests)
+
+Для запуска всех тестов в проекте выполните команду:
+
+go test ./...
+
+## Известные проблемы (Known issues)
+
+* Работа бота зависит от доступности и стабильности внешнего API курсов валют.
+* Перед использованием функций избранного необходимо убедиться, что база данных инициализирована и доступна.
+
+## Баг-трекер (Bugtracker)
+
+Если вы обнаружили ошибку или хотите предложить улучшение, пожалуйста, создайте Issue в репозитории проекта на GitHub.
+
+## Автор (Author)
+
+* GitHub: https://github.com/crocxdued
+* Контакт: @crocxdued
