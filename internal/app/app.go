@@ -30,14 +30,12 @@ func New(cfg *config.Config) *App {
 	}
 }
 
-// initDB инициализирует подключение к базе данных
 func (a *App) initDB(ctx context.Context) error {
 	db, err := sqlx.ConnectContext(ctx, "postgres", a.config.DBURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Настройка пула соединений
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
@@ -47,38 +45,32 @@ func (a *App) initDB(ctx context.Context) error {
 	return nil
 }
 
-// initBot инициализирует Telegram бота
 func (a *App) initBot() error {
 	bot, err := tgbotapi.NewBotAPI(a.config.BotToken)
 	if err != nil {
 		return fmt.Errorf("failed to create bot: %w", err)
 	}
 
-	bot.Debug = false // В продакшене отключаем дебаг
+	bot.Debug = false
 	a.bot = bot
 
 	logger.S.Infof("Authorized on account %s", bot.Self.UserName)
 	return nil
 }
 
-// initServices инициализирует все сервисы и зависимости
 func (a *App) initServices() (*handlers.BotHandler, error) {
-	// Инициализируем кэш
+
 	ratesCache := cache.NewRatesCache(a.config.CacheTTLMinutes)
 
-	// Инициализируем провайдеры курсов валют
 	providers := []services.ExchangeProvider{
 		exchangeratehost.New(),
 		cbr.New(),
 	}
 
-	// Создаем сервис для работы с курсами
 	exchangeService := services.NewExchangeService(providers, ratesCache)
 
-	// Создаем репозиторий для избранного
 	favoritesRepo := postgres.NewFavoritesRepository(a.db)
 
-	// Создаем обработчик бота
 	botHandler := handlers.NewBotHandler(a.bot, exchangeService, favoritesRepo)
 
 	return botHandler, nil
@@ -90,24 +82,21 @@ func (a *App) Run() error {
 
 	logger.S.Info("Starting application...")
 
-	// Инициализируем БД
 	if err := a.initDB(ctx); err != nil {
 		return fmt.Errorf("database initialization failed: %w", err)
 	}
 	defer a.db.Close()
 
-	// Инициализируем бота
 	if err := a.initBot(); err != nil {
 		return fmt.Errorf("bot initialization failed: %w", err)
 	}
 
-	// Инициализируем сервисы
 	botHandler, err := a.initServices()
 	if err != nil {
 		return fmt.Errorf("services initialization failed: %w", err)
 	}
 
-	// Настраиваем webhook (или long polling)
+	// Настраиваем webhook
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
@@ -115,7 +104,6 @@ func (a *App) Run() error {
 
 	logger.S.Info("Bot is now running. Press Ctrl+C to exit.")
 
-	// Обрабатываем входящие сообщения
 	for update := range updates {
 		botHandler.HandleUpdate(update)
 	}

@@ -17,7 +17,6 @@ func NewFavoritesRepository(db *sqlx.DB) *FavoritesRepository {
 	return &FavoritesRepository{db: db}
 }
 
-// AddFavorite добавляет валютную пару в избранное пользователя
 func (r *FavoritesRepository) AddFavorite(ctx context.Context, userID int64, fromCurrency, toCurrency string) error {
 	query := `
 		INSERT INTO user_favorites (user_id, from_currency, to_currency)
@@ -33,7 +32,6 @@ func (r *FavoritesRepository) AddFavorite(ctx context.Context, userID int64, fro
 	return nil
 }
 
-// GetUserFavorites возвращает избранные пары пользователя
 func (r *FavoritesRepository) GetUserFavorites(ctx context.Context, userID int64) ([]entities.UserFavorite, error) {
 	var favorites []entities.UserFavorite
 
@@ -52,7 +50,6 @@ func (r *FavoritesRepository) GetUserFavorites(ctx context.Context, userID int64
 	return favorites, nil
 }
 
-// RemoveFavorite удаляет пару из избранного
 func (r *FavoritesRepository) RemoveFavorite(ctx context.Context, userID int64, fromCurrency, toCurrency string) error {
 	query := `
 		DELETE FROM user_favorites 

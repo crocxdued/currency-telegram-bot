@@ -17,26 +17,21 @@ import (
 func main() {
 	log.Println("🚀 Starting Currency Bot...")
 
-	// 1. Загрузка конфигурации
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Config error: %v", err)
 	}
 
-	// 2. Инициализация логгера
 	if err := logger.InitGlobal(cfg.LogLevel); err != nil {
 		log.Fatalf("Logger error: %v", err)
 	}
 
-	// 3. АВТОМАТИЧЕСКИЕ МИГРАЦИИ
-	// Теперь они запускаются всегда перед стартом бота
 	logger.S.Info("Checking and running migrations...")
 	if err := runMigrations(cfg); err != nil {
 		logger.S.Fatalf("Migration failed: %v", err)
 	}
 	logger.S.Info("Migrations status: OK")
 
-	// 4. Запуск приложения
 	logger.S.Info("Starting application...")
 	application := app.New(cfg)
 

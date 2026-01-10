@@ -12,7 +12,7 @@ type cachedRate struct {
 
 type RatesCache struct {
 	mu    sync.RWMutex
-	rates map[string]cachedRate // ключ: "USD_EUR", значение: кэшированный курс
+	rates map[string]cachedRate
 	ttl   time.Duration
 }
 
@@ -23,7 +23,6 @@ func NewRatesCache(ttlMinutes int) *RatesCache {
 	}
 }
 
-// Get возвращает курс из кэша, если он еще актуален
 func (c *RatesCache) Get(from, to string) (float64, bool) {
 	key := c.buildKey(from, to)
 
@@ -42,7 +41,6 @@ func (c *RatesCache) Get(from, to string) (float64, bool) {
 	return cached.rate, true
 }
 
-// Set сохраняет курс в кэш с TTL
 func (c *RatesCache) Set(from, to string, rate float64) {
 	key := c.buildKey(from, to)
 
@@ -55,12 +53,10 @@ func (c *RatesCache) Set(from, to string, rate float64) {
 	}
 }
 
-// buildKey создает ключ для кэша из пары валют
 func (c *RatesCache) buildKey(from, to string) string {
 	return from + "_" + to
 }
 
-// Cleanup удаляет просроченные записи (можно вызывать периодически)
 func (c *RatesCache) Cleanup() {
 	c.mu.Lock()
 	defer c.mu.Unlock()

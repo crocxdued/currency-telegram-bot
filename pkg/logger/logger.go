@@ -24,7 +24,6 @@ func New(level string) (*zap.Logger, error) {
 	return logger, nil
 }
 
-// L и S глобальные логгеры для удобства использования
 var L *zap.Logger
 var S *zap.SugaredLogger
 

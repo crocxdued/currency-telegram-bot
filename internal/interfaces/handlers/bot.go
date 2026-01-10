@@ -16,7 +16,7 @@ type BotHandler struct {
 	bot             *tgbotapi.BotAPI
 	exchangeService services.ExchangeService
 	favoritesRepo   services.FavoritesRepository
-	userStates      map[int64]string // простой state management
+	userStates      map[int64]string
 }
 
 func NewBotHandler(
@@ -110,7 +110,6 @@ func (h *BotHandler) handleText(message *tgbotapi.Message) {
 		return
 	}
 
-	// Вытаскиваем валюты для создания кнопок
 	cleanText := strings.ToUpper(text)
 	parts := strings.Fields(strings.ReplaceAll(cleanText, "/", " "))
 	var currs []string
@@ -146,11 +145,11 @@ func (h *BotHandler) parseAndConvert(_ int64, text string) (string, error) {
 		if val, err := strconv.ParseFloat(p, 64); err == nil {
 			amount = val
 		} else {
-			// Очищаем слово от лишних символов и проверяем длину
+
 			cleanCurr := strings.TrimFunc(p, func(r rune) bool {
 				return !((r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z'))
 			})
-			// Валюта в ISO формате всегда 3 символа (USD, RUB, EUR)
+
 			if len(cleanCurr) == 3 {
 				currencies = append(currencies, cleanCurr)
 			}
@@ -177,7 +176,6 @@ func (h *BotHandler) parseAndConvert(_ int64, text string) (string, error) {
 	return sb.String(), nil
 }
 
-// handleHelp показывает справку
 func (h *BotHandler) handleHelp(message *tgbotapi.Message) {
 	msg := tgbotapi.NewMessage(message.Chat.ID, `
 *📖 Справка по использованию бота*
@@ -203,7 +201,6 @@ func (h *BotHandler) handleFavorites(message *tgbotapi.Message) {
 	userID := message.Chat.ID
 	ctx := context.Background()
 
-	// 1. Получаем список избранного из базы
 	favorites, err := h.favoritesRepo.GetUserFavorites(ctx, userID)
 	if err != nil {
 		log.Printf("Error getting favorites: %v", err)
@@ -211,7 +208,6 @@ func (h *BotHandler) handleFavorites(message *tgbotapi.Message) {
 		return
 	}
 
-	// 2. Если список пуст
 	if len(favorites) == 0 {
 		msg := tgbotapi.NewMessage(userID, "🌟 У вас пока нет избранных пар.\n\nЧтобы добавить, отправьте команду: `/fav_USD_RUB` или воспользуйтесь кнопкой «В избранное» после конвертации.")
 		msg.ParseMode = "Markdown"
@@ -219,7 +215,6 @@ func (h *BotHandler) handleFavorites(message *tgbotapi.Message) {
 		return
 	}
 
-	// 3. Формируем кнопки динамически
 	var rows [][]tgbotapi.InlineKeyboardButton
 	for _, fav := range favorites {
 		pairText := fmt.Sprintf("%s/%s", fav.FromCurrency, fav.ToCurrency)
@@ -234,7 +229,6 @@ func (h *BotHandler) handleFavorites(message *tgbotapi.Message) {
 		rows = append(rows, row)
 	}
 
-	// 4. Отправляем сообщение с клавиатурой
 	msg := tgbotapi.NewMessage(userID, "⭐ *Ваши избранные пары:*\nНажмите на пару для быстрого расчета или на корзину для удаления.")
 	msg.ParseMode = "Markdown"
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
@@ -283,13 +277,11 @@ func (h *BotHandler) handleCallback(callback *tgbotapi.CallbackQuery) {
 	userID := callback.Message.Chat.ID
 	messageID := callback.Message.MessageID
 
-	// 1. ОБРАБОТКА ИЗБРАННОГО
 	if strings.Contains(data, "/") {
-		// Отрезаем технические префиксы, если они есть (например, "FAVORITE_")
+
 		cleanData := data
 		if idx := strings.Index(data, "_"); idx != -1 && !strings.HasPrefix(data, "conv_") {
-			// Если в данных есть "_" и это не кнопка конвертации, берем всё, что после "_"
-			// Например: "FAVORITE_USD/RUB" -> "USD/RUB"
+
 			cleanData = data[idx+1:]
 		}
 
@@ -302,7 +294,6 @@ func (h *BotHandler) handleCallback(callback *tgbotapi.CallbackQuery) {
 		msg := tgbotapi.NewMessage(userID, result)
 		msg.ParseMode = "Markdown"
 
-		// Создаем кнопки для очищенной пары
 		parts := strings.Split(cleanData, "/")
 		if len(parts) == 2 {
 			msg.ReplyMarkup = h.createConversionKeyboard(parts[0], parts[1])
@@ -313,7 +304,6 @@ func (h *BotHandler) handleCallback(callback *tgbotapi.CallbackQuery) {
 		return
 	}
 
-	// 2. ОБРАБОТКА КНОПОК КОНВЕРТАЦИИ (префикс conv_)
 	if strings.HasPrefix(data, "conv_") {
 		parts := strings.Split(data, "_")
 		if len(parts) == 4 {
@@ -338,7 +328,6 @@ func (h *BotHandler) handleCallback(callback *tgbotapi.CallbackQuery) {
 		}
 	}
 
-	// 3. ОБРАБОТКА ДОБАВЛЕНИЯ В ИЗБРАННОЕ (префикс addfav_)
 	if strings.HasPrefix(data, "addfav_") {
 		parts := strings.Split(data, "_")
 		if len(parts) == 3 {
@@ -346,7 +335,6 @@ func (h *BotHandler) handleCallback(callback *tgbotapi.CallbackQuery) {
 			to := parts[2]
 			ctx := context.Background()
 
-			// Используем уже существующий репозиторий для сохранения
 			err := h.favoritesRepo.AddFavorite(ctx, userID, from, to)
 
 			var callbackText string
@@ -356,14 +344,12 @@ func (h *BotHandler) handleCallback(callback *tgbotapi.CallbackQuery) {
 				callbackText = fmt.Sprintf("✅ Пара %s/%s добавлена в избранное!", from, to)
 			}
 
-			// Отправляем ответ на callback, который покажется как уведомление сверху
 			callbackCfg := tgbotapi.NewCallback(callback.ID, callbackText)
 			_, _ = h.bot.Request(callbackCfg)
 			return
 		}
 	}
 
-	// ОБРАБОТКА УДАЛЕНИЯ (remfav_FROM_TO)
 	if strings.HasPrefix(data, "remfav_") {
 		parts := strings.Split(data, "_")
 		if len(parts) == 3 {
@@ -378,7 +364,6 @@ func (h *BotHandler) handleCallback(callback *tgbotapi.CallbackQuery) {
 				text = fmt.Sprintf("🗑️ %s/%s удалено из избранного", from, to)
 			}
 
-			// Отправляем уведомление (всплывающее сверху)
 			callbackCfg := tgbotapi.NewCallback(callback.ID, text)
 			_, _ = h.bot.Request(callbackCfg)
 			return
@@ -396,28 +381,22 @@ func (h *BotHandler) sendMessage(msg tgbotapi.MessageConfig) {
 }
 
 func (h *BotHandler) handleAddFavorite(message *tgbotapi.Message) {
-	// 1. Разбираем текст сообщения формата "/fav_USD_RUB"
-	// strings.Split разделяет строку по символу "_"
+
 	parts := strings.Split(message.Text, "_")
 
-	// Проверяем, что в команде достаточно частей (должно быть 3: "/fav", "USD", "RUB")
 	if len(parts) < 3 {
 		msg := tgbotapi.NewMessage(message.Chat.ID, "❌ Неверный формат. Используйте: /fav_USD_RUB")
 		h.sendMessage(msg)
 		return
 	}
 
-	// 2. ОЧИСТКА ДАННЫХ (Критически важно!)
-	// strings.TrimSpace убирает лишние пробелы и символы переноса строки,
-	// из-за которых возникала ошибка "currency not found".
 	fromCurrency := strings.ToUpper(strings.TrimSpace(parts[1]))
 	toCurrency := strings.ToUpper(strings.TrimSpace(parts[2]))
 
-	// 3. Сохранение в базу данных
 	ctx := context.Background()
 	err := h.favoritesRepo.AddFavorite(ctx, message.Chat.ID, fromCurrency, toCurrency)
 	if err != nil {
-		// Логируем ошибку для отладки в консоль
+
 		log.Printf("Error adding favorite: %v", err)
 
 		msg := tgbotapi.NewMessage(message.Chat.ID, "❌ Не удалось сохранить пару в избранное.")
@@ -425,7 +404,6 @@ func (h *BotHandler) handleAddFavorite(message *tgbotapi.Message) {
 		return
 	}
 
-	// 4. Уведомление пользователя об успехе
 	successText := fmt.Sprintf("✅ Пара *%s/%s* добавлена в ваше избранное!", fromCurrency, toCurrency)
 	msg := tgbotapi.NewMessage(message.Chat.ID, successText)
 	msg.ParseMode = "Markdown"

@@ -6,14 +6,14 @@
     
     WORKDIR /app
     
-    # Кэшируем зависимости
+    
     COPY go.mod go.sum ./
     RUN go mod download
     
-    # Копируем весь код
+    
     COPY . .
     
-    # Собираем бинарник в корень образа builder'а (абсолютный путь!)
+    
     RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /currency-bot ./cmd/bot
     
     # ---------- Runtime ----------
@@ -23,11 +23,11 @@
     
     WORKDIR /app
     
-    # Копируем точно из корня builder'а — 100% найдёт
+    
     COPY --from=builder /currency-bot ./currency-bot
     COPY --from=builder /app/migrations ./migrations
     
-    # Делаем исполняемым
+    
     RUN chmod +x ./currency-bot
     
     EXPOSE 8080

@@ -25,12 +25,10 @@ func CreateInlineKeyboard(favorites []string) tgbotapi.InlineKeyboardMarkup {
 	for i := 0; i < len(favorites); i += 2 {
 		var row []tgbotapi.InlineKeyboardButton
 
-		// Первая кнопка в ряду
 		if i < len(favorites) {
 			row = append(row, tgbotapi.NewInlineKeyboardButtonData(favorites[i], "favorite_"+favorites[i]))
 		}
 
-		// Вторая кнопка в ряду (если есть)
 		if i+1 < len(favorites) {
 			row = append(row, tgbotapi.NewInlineKeyboardButtonData(favorites[i+1], "favorite_"+favorites[i+1]))
 		}
@@ -43,7 +41,7 @@ func CreateInlineKeyboard(favorites []string) tgbotapi.InlineKeyboardMarkup {
 
 // CreateCurrencyKeyboard создает клавиатуру для выбора валют
 func CreateCurrencyKeyboard() tgbotapi.InlineKeyboardMarkup {
-	// Популярные валюты для быстрого выбора
+
 	currencies := []string{"USD", "EUR", "RUB", "GBP", "JPY", "CNY", "CAD", "CHF"}
 
 	var rows [][]tgbotapi.InlineKeyboardButton

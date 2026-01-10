@@ -19,7 +19,6 @@ func Load() (*Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Defaults
 	viper.SetDefault("LOG_LEVEL", "info")
 	viper.SetDefault("CACHE_TTL_MINUTES", 5)
 	viper.SetDefault("POSTGRES_PORT", "5432")
@@ -30,7 +29,6 @@ func Load() (*Config, error) {
 
 	var c Config
 
-	// Собираем DB_URL из отдельных переменных
 	c.DBURL = fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		viper.GetString("POSTGRES_USER"),

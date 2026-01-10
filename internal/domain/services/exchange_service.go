@@ -20,18 +20,15 @@ func NewExchangeService(providers []ExchangeProvider, cache *cache.RatesCache) *
 	}
 }
 
-// GetRate получает курс обмена с использованием кэша и fallback провайдеров
 func (s *ExchangeServiceImpl) GetRate(ctx context.Context, from, to string) (float64, error) {
-	// 1. Максимально жесткая очистка входящих строк
+
 	from = strings.ToUpper(strings.TrimSpace(from))
 	to = strings.ToUpper(strings.TrimSpace(to))
 
-	// 2. Проверка на пустые строки (чтобы не ходить в кэш с мусором)
 	if from == "" || to == "" {
 		return 0, fmt.Errorf("invalid currency codes: from='%s', to='%s'", from, to)
 	}
 
-	// Пробуем получить курс от доступных провайдеров
 	var lastErr error
 	for _, provider := range s.providers {
 		if !provider.IsAvailable() {
@@ -44,7 +41,6 @@ func (s *ExchangeServiceImpl) GetRate(ctx context.Context, from, to string) (flo
 			continue
 		}
 
-		// Сохраняем в кэш при успешном получении
 		s.cache.Set(from, to, rate)
 		return rate, nil
 	}
@@ -52,7 +48,6 @@ func (s *ExchangeServiceImpl) GetRate(ctx context.Context, from, to string) (flo
 	return 0, fmt.Errorf("failed to get exchange rate: %w", lastErr)
 }
 
-// ConvertAmount конвертирует сумму из одной валюты в другую
 func (s *ExchangeServiceImpl) ConvertAmount(ctx context.Context, amount float64, from, to string) (float64, error) {
 	rate, err := s.GetRate(ctx, from, to)
 	if err != nil {
@@ -62,7 +57,6 @@ func (s *ExchangeServiceImpl) ConvertAmount(ctx context.Context, amount float64,
 	return amount * rate, nil
 }
 
-// GetSupportedCurrencies возвращает список поддерживаемых валют
 func (s *ExchangeServiceImpl) GetSupportedCurrencies(ctx context.Context) (map[string]string, error) {
 	// Основные валюты, поддерживаемые нашим сервисом
 	currencies := map[string]string{
